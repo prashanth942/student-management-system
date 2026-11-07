@@ -1,15 +1,29 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 import './App.css'
 
 function App() {
   const [students, setStudents] = useState([])
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [age, setAge] = useState('')
   const [course, setCourse] = useState('')
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState(null)
 
+  // Get all students from MongoDB
+  useEffect(() => {
+    axios.get('http://localhost:5000/api/students')
+      .then((response) => {
+        setStudents(response.data)
+      })
+      .catch((error) => {
+        console.error('Error fetching students:', error)
+      })
+  }, [])
+
+  // Search students
   const filteredStudents = students.filter((student) => {
     const searchText = search.toLowerCase().trim()
 
@@ -19,70 +33,102 @@ function App() {
     )
   })
 
-  function handleSubmit(event) {
+  // Add or update student
+  async function handleSubmit(event) {
     event.preventDefault()
 
-    if (!name.trim() || !email.trim() || !course) {
+    if (!name.trim() || !email.trim() || !age || !course) {
       alert('Please fill in all fields.')
       return
     }
 
-    if (editingId !== null) {
-      setStudents((previousStudents) =>
-        previousStudents.map((student) =>
-          student.id === editingId
-            ? { ...student, name: name.trim(), email: email.trim(), course }
-            : student
-        )
-      )
-      setEditingId(null)
-    } else {
-      const newStudent = {
-        id: Date.now(),
-        name: name.trim(),
-        email: email.trim(),
-        course,
-      }
-
-      setStudents((previousStudents) => [
-        ...previousStudents,
-        newStudent,
-      ])
+    const studentData = {
+      name: name.trim(),
+      email: email.trim(),
+      age: Number(age),
+      course,
     }
 
-    setName('')
-    setEmail('')
-    setCourse('')
+    try {
+      if (editingId !== null) {
+        const response = await axios.put(
+          `http://localhost:5000/api/students/${editingId}`,
+          studentData
+        )
+
+        setStudents((previousStudents) =>
+          previousStudents.map((student) =>
+            student._id === editingId ? response.data : student
+          )
+        )
+
+        setEditingId(null)
+        alert('Student updated successfully!')
+      } else {
+        const response = await axios.post(
+          'http://localhost:5000/api/students',
+          studentData
+        )
+
+        setStudents((previousStudents) => [
+          ...previousStudents,
+          response.data,
+        ])
+
+        alert('Student added successfully!')
+      }
+
+      setName('')
+      setEmail('')
+      setAge('')
+      setCourse('')
+    } catch (error) {
+      alert(error.response?.data?.message || 'Something went wrong')
+    }
   }
 
+  // Load student details into the form
   function editStudent(student) {
     setName(student.name)
     setEmail(student.email)
+    setAge(String(student.age))
     setCourse(student.course)
-    setEditingId(student.id)
+    setEditingId(student._id)
+
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function deleteStudent(id) {
+  // Delete student from MongoDB
+  async function deleteStudent(id) {
     const confirmed = window.confirm(
       'Are you sure you want to delete this student?'
     )
 
-    if (confirmed) {
+    if (!confirmed) return
+
+    try {
+      await axios.delete(`http://localhost:5000/api/students/${id}`)
+
       setStudents((previousStudents) =>
-        previousStudents.filter((student) => student.id !== id)
+        previousStudents.filter((student) => student._id !== id)
       )
 
       if (editingId === id) {
         cancelEdit()
       }
+
+      alert('Student deleted successfully!')
+    } catch (error) {
+      alert(error.response?.data?.message || 'Error deleting student')
     }
   }
 
+  // Cancel editing
   function cancelEdit() {
     setEditingId(null)
     setName('')
     setEmail('')
+    setAge('')
     setCourse('')
   }
 
@@ -118,10 +164,21 @@ function App() {
           <input
             id="email"
             type="email"
-            placeholder="Enter email address"
+            placeholder="Enter student email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
+          />
+
+          <label htmlFor="age">Age</label>
+          <input
+            id="age"
+            type="number"
+            placeholder="Enter student age"
+            value={age}
+            onChange={(event) => setAge(event.target.value)}
+            required
+            min="1"
           />
 
           <label htmlFor="course">Course</label>
@@ -176,6 +233,7 @@ function App() {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
+                  <th>Age</th>
                   <th>Course</th>
                   <th>Actions</th>
                 </tr>
@@ -183,9 +241,10 @@ function App() {
 
               <tbody>
                 {filteredStudents.map((student) => (
-                  <tr key={student.id}>
+                  <tr key={student._id}>
                     <td>{student.name}</td>
                     <td>{student.email}</td>
+                    <td>{student.age}</td>
                     <td>{student.course}</td>
                     <td>
                       <button
@@ -197,7 +256,7 @@ function App() {
                       {' '}
                       <button
                         type="button"
-                        onClick={() => deleteStudent(student.id)}
+                        onClick={() => deleteStudent(student._id)}
                       >
                         Delete
                       </button>
