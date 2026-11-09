@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import './App.css'
 
+const API_URL = 'https://student-management-system-0909.onrender.com/api/students'
+
 function App() {
   const [students, setStudents] = useState([])
   const [name, setName] = useState('')
@@ -12,28 +14,20 @@ function App() {
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState(null)
 
-  // Get all students from MongoDB
   useEffect(() => {
-    axios.get('https://student-management-system-0909.onrender.com/api/students')
-      .then((response) => {
-        setStudents(response.data)
-      })
-      .catch((error) => {
-        console.error('Error fetching students:', error)
-      })
+    axios.get(API_URL)
+      .then((response) => setStudents(response.data))
+      .catch((error) => console.error('Error fetching students:', error))
   }, [])
 
-  // Search students
   const filteredStudents = students.filter((student) => {
     const searchText = search.toLowerCase().trim()
-
     return (
       student.name.toLowerCase().includes(searchText) ||
       student.email.toLowerCase().includes(searchText)
     )
   })
 
-  // Add or update student
   async function handleSubmit(event) {
     event.preventDefault()
 
@@ -52,7 +46,7 @@ function App() {
     try {
       if (editingId !== null) {
         const response = await axios.put(
-          https://student-management-system-0909.onrender.com/api/students/${editingId}`,
+          `${API_URL}/${editingId}`,
           studentData
         )
 
@@ -65,10 +59,7 @@ function App() {
         setEditingId(null)
         alert('Student updated successfully!')
       } else {
-        const response = await axios.post(
-          'http://localhost:5000/api/students',
-          studentData
-        )
+        const response = await axios.post(API_URL, studentData)
 
         setStudents((previousStudents) => [
           ...previousStudents,
@@ -87,7 +78,6 @@ function App() {
     }
   }
 
-  // Load student details into the form
   function editStudent(student) {
     setName(student.name)
     setEmail(student.email)
@@ -98,7 +88,6 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Delete student from MongoDB
   async function deleteStudent(id) {
     const confirmed = window.confirm(
       'Are you sure you want to delete this student?'
@@ -107,7 +96,7 @@ function App() {
     if (!confirmed) return
 
     try {
-      await axios.delete(`http://localhost:5000/api/students/${id}`)
+      await axios.delete(`${API_URL}/${id}`)
 
       setStudents((previousStudents) =>
         previousStudents.filter((student) => student._id !== id)
@@ -123,7 +112,6 @@ function App() {
     }
   }
 
-  // Cancel editing
   function cancelEdit() {
     setEditingId(null)
     setName('')
@@ -247,17 +235,11 @@ function App() {
                     <td>{student.age}</td>
                     <td>{student.course}</td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => editStudent(student)}
-                      >
+                      <button type="button" onClick={() => editStudent(student)}>
                         Edit
                       </button>
                       {' '}
-                      <button
-                        type="button"
-                        onClick={() => deleteStudent(student._id)}
-                      >
+                      <button type="button" onClick={() => deleteStudent(student._id)}>
                         Delete
                       </button>
                     </td>
