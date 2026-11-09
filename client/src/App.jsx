@@ -14,7 +14,7 @@ function App() {
 
   // Get all students from MongoDB
   useEffect(() => {
-    axios.get('http://localhost:5000/api/students')
+    axios.get('https://student-management-system-0909.onrender.com/api/students')
       .then((response) => {
         setStudents(response.data)
       })
@@ -52,7 +52,7 @@ function App() {
     try {
       if (editingId !== null) {
         const response = await axios.put(
-          `http://localhost:5000/api/students/${editingId}`,
+          https://student-management-system-0909.onrender.com/api/students/${editingId}`,
           studentData
         )
 
